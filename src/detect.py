@@ -1,8 +1,10 @@
 """Vehicle detection from orthophoto using YOLOv8-OBB + SAHI tiling."""
 
+import argparse
 from pathlib import Path
+
+import cv2
 import geopandas as gpd
-import numpy as np
 import rasterio
 from shapely.geometry import box
 from sahi import AutoDetectionModel
@@ -15,15 +17,13 @@ OUTPUT_PREVIEW = Path("outputs/detection_preview.jpg")
 VEHICLE_CLASSES = {"small vehicle", "large vehicle"}
 MODEL = "yolov8n-obb.pt"
 
-# Tile size and overlap – tune for vehicle scale in this orthophoto
-SLICE_SIZE = 640
-OVERLAP = 0.2
-CONF = 0.5
-
 
 def run_detection(
     input_path: Path = INPUT,
     output_vectors: Path = OUTPUT_VECTORS,
+    conf: float = 0.25,
+    slice_size: int = 640,
+    overlap: float = 0.2,
 ) -> gpd.GeoDataFrame:
     output_vectors.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PREVIEW.parent.mkdir(exist_ok=True)
@@ -31,33 +31,32 @@ def run_detection(
     with rasterio.open(input_path) as src:
         crs = src.crs
         transform = src.transform
-        height = src.height
+
+    print(f"conf={conf}  slice={slice_size}px  overlap={overlap}")
+    print(f"Input: {input_path.name}")
 
     detection_model = AutoDetectionModel.from_pretrained(
         model_type="ultralytics",
         model_path=MODEL,
-        confidence_threshold=CONF,
+        confidence_threshold=conf,
         device="cpu",
     )
 
-    print(f"Running tiled inference on {input_path.name} (tiles {SLICE_SIZE}px, overlap {OVERLAP})...")
     result = get_sliced_prediction(
         image=str(input_path),
         detection_model=detection_model,
-        slice_height=SLICE_SIZE,
-        slice_width=SLICE_SIZE,
-        overlap_height_ratio=OVERLAP,
-        overlap_width_ratio=OVERLAP,
+        slice_height=slice_size,
+        slice_width=slice_size,
+        overlap_height_ratio=overlap,
+        overlap_width_ratio=overlap,
         verbose=1,
     )
 
-    # Filter vehicle classes and build GeoDataFrame
     records = []
     for pred in result.object_prediction_list:
         if pred.category.name not in VEHICLE_CLASSES:
             continue
-        b = pred.bbox  # BoundingBox with minx, miny, maxx, maxy in pixel coords
-        # Convert pixel coords to raster world coords via affine transform
+        b = pred.bbox
         wx1, wy1 = transform * (b.minx, b.miny)
         wx2, wy2 = transform * (b.maxx, b.maxy)
         records.append({
@@ -70,13 +69,12 @@ def run_detection(
     print(f"\nDetected {len(gdf)} vehicles")
     if len(gdf):
         print(gdf["class"].value_counts().to_string())
+        print(f"Confidence stats:\n{gdf['confidence'].describe().round(3).to_string()}")
         gdf.to_file(output_vectors, driver="GPKG")
         print(f"Saved: {output_vectors}")
 
-    # Preview – draw only vehicle boxes, downscaled to max 2000px wide
-    import cv2
+    # Preview – draw only vehicle boxes, resize to max 2000px wide
     img = cv2.imread(str(input_path))
-    scale = min(1.0, 2000 / img.shape[1])
     colors = {"small vehicle": (0, 255, 0), "large vehicle": (0, 128, 255)}
     for pred in result.object_prediction_list:
         if pred.category.name not in VEHICLE_CLASSES:
@@ -86,6 +84,7 @@ def run_detection(
                       (int(b.minx), int(b.miny)),
                       (int(b.maxx), int(b.maxy)),
                       colors.get(pred.category.name, (255, 0, 0)), 3)
+    scale = min(1.0, 2000 / img.shape[1])
     if scale < 1.0:
         img = cv2.resize(img, (int(img.shape[1] * scale), int(img.shape[0] * scale)))
     cv2.imwrite(str(OUTPUT_PREVIEW), img)
@@ -95,4 +94,16 @@ def run_detection(
 
 
 if __name__ == "__main__":
-    run_detection()
+    parser = argparse.ArgumentParser(description="Detect vehicles in orthophoto")
+    parser.add_argument("--input", type=Path, default=INPUT)
+    parser.add_argument("--conf", type=float, default=0.25, help="Confidence threshold (default: 0.25)")
+    parser.add_argument("--slice-size", type=int, default=640, help="Tile size in px (default: 640)")
+    parser.add_argument("--overlap", type=float, default=0.2, help="Tile overlap ratio (default: 0.2)")
+    args = parser.parse_args()
+
+    run_detection(
+        input_path=args.input,
+        conf=args.conf,
+        slice_size=args.slice_size,
+        overlap=args.overlap,
+    )
