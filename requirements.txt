@@ -1,0 +1,5 @@
+geopandas
+rasterio
+leafmap
+osmnx
+segment-geospatial[samgeo2]
