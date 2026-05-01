@@ -7,7 +7,8 @@ import rasterio
 from shapely.geometry import box
 from ultralytics import YOLO
 
-INPUT = Path("data/processed/crop_1000x1000.tif")
+INPUT = Path("data/raw/105000312_0000_00_0000_P00_01.tif")
+#INPUT = Path("data/processed/crop_1000x1000.tif")
 OUTPUT_VECTORS = Path("data/vectors/vehicles.gpkg")
 
 # DOTA classes that represent vehicles
