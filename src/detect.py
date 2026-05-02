@@ -10,7 +10,7 @@ from shapely.geometry import box
 from sahi import AutoDetectionModel
 from sahi.predict import get_sliced_prediction
 
-INPUT = Path("data/raw/105000312_0000_00_0000_P00_01.tif")
+INPUT = Path("data/raw/Olomouc_imagery_1.tif")
 OUTPUT_VECTORS = Path("data/vectors/vehicles.gpkg")
 OUTPUT_PREVIEW = Path("outputs/detection_preview.jpg")
 
