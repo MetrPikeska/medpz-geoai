@@ -19,10 +19,10 @@
 
 | Ortofoto | Oblast | Vozidel | Malá | Velká | Adres | Zón (≥10 ob.) | Největší parkoviště |
 |---|---|---|---|---|---|---|---|
-| 1 | Neředín / Nová Ulice | 1 022 | 838 | 184 | 512 | 233 | 232 voz., 41 173 m² |
-| 2 | Nová Ulice (východ) | 639 | 444 | 195 | 389 | 206 | 51 voz., 6 210 m² |
-| 3 | Hodolany | 678 | 431 | 247 | 445 | 136 | 113 voz., 25 375 m² |
-| 4 | Bělidla | 829 | 499 | 330 | 224 | 145 | 247 voz., **76 151 m²** |
+| 1 | Neředín / Nová Ulice | 1 022 | 838 | 184 | 512 | 233 | 67 voz., 1 060 m² |
+| 2 | Nová Ulice (východ) | 639 | 444 | 195 | 389 | 206 | 22 voz., 578 m² |
+| 3 | Hodolany | 678 | 431 | 247 | 445 | 136 | 51 voz., 635 m² |
+| 4 | Bělidla | 829 | 499 | 330 | 224 | 145 | **45 voz., 1 444 m²** |
 
 | Metrika | Hodnota |
 |---|---|
@@ -47,25 +47,25 @@
 
 ![Analýza TIF 1](docs/analysis_map.png)
 
-*Vlevo: absolutní počty vozidel per Voronoi zóna. Vpravo: hustota na obyvatele. 1 022 vozidel, 512 adres.*
+*Vlevo: absolutní počty vozidel per Voronoi zóna. Vpravo: hustota na obyvatele. 1 022 vozidel, 512 adres, 39 parkovišť (největší: 67 voz., 1 060 m²).*
 
 ### TIF 2 – Nová Ulice (východ)
 
 ![Analýza TIF 2](docs/analysis_map_2.png)
 
-*639 vozidel, 389 adres. Zástavba s více průmyslovými a smíšenými objekty — odtud vyšší podíl velkých vozidel (30 %).*
+*639 vozidel, 389 adres, 8 parkovišť (největší: 22 voz., 578 m²). Zástavba s více průmyslovými objekty — vyšší podíl velkých vozidel (30 %).*
 
 ### TIF 3 – Hodolany
 
 ![Analýza TIF 3](docs/analysis_map_3.png)
 
-*678 vozidel, 445 adres. Převažují sídlištní bloky — větší Voronoi zóny s nižší průměrnou hustotou.*
+*678 vozidel, 445 adres, 18 parkovišť (největší: 51 voz., 635 m²). Sídlištní bloky — větší Voronoi zóny s nižší průměrnou hustotou.*
 
 ### TIF 4 – Bělidla
 
 ![Analýza TIF 4](docs/analysis_map_4.png)
 
-*829 vozidel, 224 adres. Nejmenší počet adres → největší Voronoi zóny. Největší parkoviště v celém datasetu (247 voz., 76 151 m²). Statisticky nejsilnější korelace věk × vozidla.*
+*829 vozidel, 224 adres, 24 parkovišť (největší: 45 voz., 1 444 m²). Nejmenší počet adres → největší Voronoi zóny. Statisticky nejsilnější korelace věk × vozidla.*
 
 ---
 
@@ -214,8 +214,10 @@ python src/parking_analysis.py --vehicles data/vectors/vehicles_1.gpkg \
 | Podíl velkých vozidel × věk | `outputs/size_ratio_correlations_{N}.png` |
 | Vzdálenost od centra vs. hustota | `outputs/distance_vs_density_{N}.png` |
 | Top 10 ulic | `outputs/street_density_top10_{N}.png` |
-| DBSCAN parkoviště (eps=25 m) | `outputs/parking_clusters_{N}.gpkg` |
+| DBSCAN parkoviště (eps=12 m, min=8, max=5 000 m²) | `outputs/parking_clusters_{N}.gpkg` |
 | Senioři vs. podíl velkých vozidel | `outputs/seniors_vs_large_ratio_{N}.png` |
+
+> **Poznámka k DBSCAN:** Původní `eps=25 m` spojoval auta přes celé sídlištní bloky (uličky ~20 m) → falešná parkoviště přes 40 000 m². Zpřísněno na `eps=12 m, min_samples=8` + filtr max 5 000 m².
 
 ### `src/compare_all.py` – Cross-TIF srovnání
 

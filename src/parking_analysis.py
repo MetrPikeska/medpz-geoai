@@ -226,34 +226,46 @@ def analyze_parking_clusters(vehicles: gpd.GeoDataFrame, suffix: str = "") -> No
     centroids["geometry"] = vehicles.geometry.centroid
     coords = np.column_stack([centroids.geometry.x, centroids.geometry.y])
 
-    # eps=25 m, min 5 vozidel = parkoviště
-    labels = DBSCAN(eps=25, min_samples=5).fit_predict(coords)
+    # eps=12 m (šířka parkovacího místa ~2.5m + mezera), min 8 vozidel = parkoviště
+    # Původní eps=25 m spojoval celé obytné bloky přes komunikace → falešná mega-parkoviště
+    labels = DBSCAN(eps=12, min_samples=8).fit_predict(coords)
     centroids["cluster"] = labels
 
     n_clusters = (labels >= 0).sum()
     n_noise = (labels == -1).sum()
-    print(f"  Clusterů (parkovišť): {labels.max() + 1}")
+    print(f"  Clusterů před filtrem plochy: {labels.max() + 1}")
     print(f"  Vozidel v clusterech: {n_clusters} / {len(labels)}")
     print(f"  Noise (izolovaná vozidla): {n_noise}")
 
-    # Convex hull každého clusteru
+    # Convex hull každého clusteru + filtr max plochy
+    # Reálné parkoviště: typicky < 5 000 m² (cca 50 × 100 m)
+    MAX_AREA_M2 = 5_000
     records = []
+    skipped = 0
     for cid in sorted(set(labels)):
         if cid == -1:
             continue
         pts = centroids[centroids["cluster"] == cid]
         hull = MultiPoint(list(pts.geometry)).convex_hull
+        area = round(hull.area, 1)
+        if area > MAX_AREA_M2:
+            skipped += 1
+            continue
         records.append({
             "cluster_id": cid,
             "vehicle_count": len(pts),
-            "area_m2": round(hull.area, 1),
+            "area_m2": area,
             "geometry": hull,
         })
+
+    if skipped:
+        print(f"  Vyloučeno {skipped} clusterů s plochou > {MAX_AREA_M2} m² (obytné bloky, ne parkoviště)")
 
     clusters_gdf = gpd.GeoDataFrame(records, crs=vehicles.crs)
     clusters_gdf = clusters_gdf.sort_values("vehicle_count", ascending=False)
 
-    print(f"\n  Průměr vozidel na cluster: {clusters_gdf['vehicle_count'].mean():.1f}")
+    print(f"\n  Parkovišť po filtru: {len(clusters_gdf)}")
+    print(f"  Průměr vozidel na cluster: {clusters_gdf['vehicle_count'].mean():.1f}")
     print(f"  Průměrná plocha clusteru: {clusters_gdf['area_m2'].mean():.0f} m²")
     biggest = clusters_gdf.iloc[0]
     print(f"  Největší parkoviště: cluster #{biggest['cluster_id']} "
