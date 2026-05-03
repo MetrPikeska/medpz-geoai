@@ -15,13 +15,49 @@ Oblast: Neředín / Nová Ulice, Olomouc. Ortofoto 2016, rozlišení ~10 cm/px, 
 
 | Metrika | Hodnota |
 |---|---|
-| Detekovaná vozidla | 1 124 (830 malých, 294 velkých) |
+| Detekovaná vozidla | 1 112 (819 malých, 293 velkých) |
 | Voronoi zón | 307 (162 s ≥ 10 obyvateli) |
-| DBSCAN parkovišť | 28 clusterů |
-| Největší parkoviště | 249 vozidel, 58 566 m² |
-| Průměr vozidel / adresa | 3,66 |
+| DBSCAN parkovišť | 30 clusterů |
+| Největší parkoviště | 232 vozidel, 41 173 m² |
+| Průměr vozidel / adresa | 3,6 |
 | Korelace věk × hustota aut | r = −0,13 až +0,14 (nevýznamná) |
 | Optimální `iou_match` | 0,3 → 0 % duplicit |
+
+### Detekce vozidel na ortofotu
+
+![Náhled detekce](docs/detection_preview.jpg)
+
+*Zelené boxy = malá vozidla, oranžové = velká vozidla. YOLOv8-OBB + SAHI tiling (640 px dlaždice, overlap 20 %).*
+
+### Hustota vozidel na Voronoi zóny
+
+![Analýza hustoty](docs/analysis_map.png)
+
+*Vlevo: absolutní počty vozidel v každé Voronoi zóně. Vpravo: normalizováno na počet obyvatel adresy.*
+
+### Korelace s věkovými skupinami
+
+![Korelace](docs/correlations.png)
+
+*Po normalizaci na density_per_resident (vozidla/obyvatel) žádná věková skupina nevykazuje statisticky významnou korelaci (p > 0,05, n = 162 zón s ≥ 10 obyvateli).*
+
+### Hustota vozidel podle ulic
+
+![Ulice](docs/street_density_top10.png)
+
+*Top 10 ulic seřazených podle průměrné hustoty vozidel na obyvatele (filtr: ≥ 3 adresy v ulici).*
+
+### Evaluace: duplicitní detekce
+
+![Duplicity](docs/eval_duplicate_map.png)
+
+*Modrá = unikátní detekce, červená = duplicitní box (IOS > 0,3 s jiným boxem stejné třídy). Aktuální nastavení: 2,6 % duplicit před sweepem; po nastavení `iou_match=0,3` → 0 %.*
+
+### Parametrický sweep: vliv nastavení na duplicity
+
+![Heatmap sweepů](docs/sweep_heatmap.png)
+
+*`postprocess_match_threshold` (iou_match) je dominantní parametr. Při hodnotě 0,3 jsou duplicity eliminovány pro všechny kombinace conf × overlap.*
 
 ## Instalace
 
