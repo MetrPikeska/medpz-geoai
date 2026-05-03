@@ -1,7 +1,8 @@
 # Detekce a analýza vozidel z ortofota – Olomouc 2016
 
-Semestrální práce z dálkového průzkumu Země.  
-Oblast: Neředín / Nová Ulice, Olomouc. Ortofoto 2016, rozlišení ~10 cm/px, EPSG:5514.
+**Semestrální práce** | Pokročilé metody dálkového průzkumu Země (MEDPZ)  
+**Autoři:** Petr Mikeska, Daniel Lee Číp  
+**Oblast:** Neředín / Nová Ulice, Olomouc | Ortofoto 2016, rozlišení ~10 cm/px, EPSG:5514
 
 ## Co projekt dělá
 
