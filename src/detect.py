@@ -97,6 +97,7 @@ def run_detection(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Detect vehicles in orthophoto")
     parser.add_argument("--input", type=Path, default=INPUT)
+    parser.add_argument("--output-vectors", type=Path, default=OUTPUT_VECTORS)
     parser.add_argument("--conf", type=float, default=0.25, help="Confidence threshold (default: 0.25)")
     parser.add_argument("--slice-size", type=int, default=640, help="Tile size in px (default: 640)")
     parser.add_argument("--overlap", type=float, default=0.2, help="Tile overlap ratio (default: 0.2)")
@@ -104,6 +105,7 @@ if __name__ == "__main__":
 
     run_detection(
         input_path=args.input,
+        output_vectors=args.output_vectors,
         conf=args.conf,
         slice_size=args.slice_size,
         overlap=args.overlap,

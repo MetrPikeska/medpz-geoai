@@ -74,7 +74,7 @@ def load_data() -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame]:
 # 2. Velikostní klasifikace
 # ---------------------------------------------------------------------------
 
-def analyze_size_ratio(voronoi: gpd.GeoDataFrame, valid: gpd.GeoDataFrame) -> None:
+def analyze_size_ratio(voronoi: gpd.GeoDataFrame, valid: gpd.GeoDataFrame, suffix: str = "") -> None:
     """Poměr velkých vozidel, korelace s věkovými skupinami."""
     print("\n[1/5] Velikostní klasifikace")
 
@@ -125,14 +125,14 @@ def analyze_size_ratio(voronoi: gpd.GeoDataFrame, valid: gpd.GeoDataFrame) -> No
                  f"(filtr: celkem ≥ 10 obyvatel, vehicles_total ≥ 1, n = {len(df)})")
     ax.grid(axis="y", alpha=0.3)
     fig.tight_layout()
-    save_fig(fig, OUT_DIR / "size_ratio_correlations.png")
+    save_fig(fig, OUT_DIR / f"size_ratio_correlations{suffix}.png")
 
 
 # ---------------------------------------------------------------------------
 # 3. Vzdálenost od centra
 # ---------------------------------------------------------------------------
 
-def analyze_distance(valid: gpd.GeoDataFrame) -> None:
+def analyze_distance(valid: gpd.GeoDataFrame, suffix: str = "") -> None:
     """Vzdálenost adresního bodu od středu Olomouce vs. hustota vozidel."""
     print("\n[2/5] Vzdálenost od centra")
 
@@ -162,14 +162,14 @@ def analyze_distance(valid: gpd.GeoDataFrame) -> None:
     ax.legend(fontsize=9)
     ax.grid(alpha=0.3)
     fig.tight_layout()
-    save_fig(fig, OUT_DIR / "distance_vs_density.png")
+    save_fig(fig, OUT_DIR / f"distance_vs_density{suffix}.png")
 
 
 # ---------------------------------------------------------------------------
 # 4. Analýza ulic
 # ---------------------------------------------------------------------------
 
-def analyze_streets(voronoi: gpd.GeoDataFrame) -> None:
+def analyze_streets(voronoi: gpd.GeoDataFrame, suffix: str = "") -> None:
     """Seskupení adres podle ulice, top 10 ulic s nejvyšší hustotou."""
     print("\n[3/5] Analýza ulic")
 
@@ -207,18 +207,18 @@ def analyze_streets(voronoi: gpd.GeoDataFrame) -> None:
     ax.grid(axis="x", alpha=0.3)
     ax.set_xlim(0, top10["prumer_density"].max() * 1.25)
     fig.tight_layout()
-    save_fig(fig, OUT_DIR / "street_density_top10.png")
+    save_fig(fig, OUT_DIR / f"street_density_top10{suffix}.png")
 
     # Export CSV
-    grouped.to_csv(OUT_DIR / "street_stats.csv", index=False)
-    print(f"  → {OUT_DIR / 'street_stats.csv'}")
+    grouped.to_csv(OUT_DIR / f"street_stats{suffix}.csv", index=False)
+    print(f"  → {OUT_DIR / f'street_stats{suffix}.csv'}")
 
 
 # ---------------------------------------------------------------------------
 # 5. DBSCAN clustering parkovišť
 # ---------------------------------------------------------------------------
 
-def analyze_parking_clusters(vehicles: gpd.GeoDataFrame) -> None:
+def analyze_parking_clusters(vehicles: gpd.GeoDataFrame, suffix: str = "") -> None:
     """DBSCAN na centroidech vozidel → polygony parkovišť."""
     print("\n[4/5] DBSCAN clustering parkovišť")
 
@@ -259,16 +259,17 @@ def analyze_parking_clusters(vehicles: gpd.GeoDataFrame) -> None:
     print(f"  Největší parkoviště: cluster #{biggest['cluster_id']} "
           f"({biggest['vehicle_count']} vozidel, {biggest['area_m2']:.0f} m²)")
 
-    OUT_CLUSTERS.parent.mkdir(parents=True, exist_ok=True)
-    clusters_gdf.to_file(OUT_CLUSTERS, driver="GPKG")
-    print(f"  → {OUT_CLUSTERS}")
+    out_clusters = OUT_DIR / f"parking_clusters{suffix}.gpkg"
+    out_clusters.parent.mkdir(parents=True, exist_ok=True)
+    clusters_gdf.to_file(out_clusters, driver="GPKG")
+    print(f"  → {out_clusters}")
 
 
 # ---------------------------------------------------------------------------
 # 6. Podíl seniorů vs. podíl velkých vozidel
 # ---------------------------------------------------------------------------
 
-def analyze_seniors_vs_large(valid: gpd.GeoDataFrame) -> None:
+def analyze_seniors_vs_large(valid: gpd.GeoDataFrame, suffix: str = "") -> None:
     """Scatter: podíl seniorů vs. podíl velkých vozidel (filtr vehicles_total ≥ 3)."""
     print("\n[5/5] Senioři vs. podíl velkých vozidel")
 
@@ -300,7 +301,7 @@ def analyze_seniors_vs_large(valid: gpd.GeoDataFrame) -> None:
     ax.legend(fontsize=9)
     ax.grid(alpha=0.3)
     fig.tight_layout()
-    save_fig(fig, OUT_DIR / "seniors_vs_large_ratio.png")
+    save_fig(fig, OUT_DIR / f"seniors_vs_large_ratio{suffix}.png")
 
 
 # ---------------------------------------------------------------------------
@@ -310,6 +311,7 @@ def analyze_seniors_vs_large(valid: gpd.GeoDataFrame) -> None:
 def run_parking_analysis(
     voronoi_gpkg: Path = VORONOI_GPKG,
     vehicles_gpkg: Path = VEHICLES_GPKG,
+    suffix: str = "",
 ) -> None:
     global VORONOI_GPKG, VEHICLES_GPKG
     VORONOI_GPKG = voronoi_gpkg
@@ -321,11 +323,11 @@ def run_parking_analysis(
 
     voronoi, vehicles, valid = load_data()
 
-    analyze_size_ratio(voronoi, valid)
-    analyze_distance(valid)
-    analyze_streets(voronoi)
-    analyze_parking_clusters(vehicles)
-    analyze_seniors_vs_large(valid)
+    analyze_size_ratio(voronoi, valid, suffix)
+    analyze_distance(valid, suffix)
+    analyze_streets(voronoi, suffix)
+    analyze_parking_clusters(vehicles, suffix)
+    analyze_seniors_vs_large(valid, suffix)
 
     print("\nHotovo. Výstupy v outputs/")
 
@@ -334,5 +336,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Rozšířená analýza parkování")
     parser.add_argument("--voronoi", type=Path, default=VORONOI_GPKG)
     parser.add_argument("--vehicles", type=Path, default=VEHICLES_GPKG)
+    parser.add_argument("--suffix", type=str, default="")
     args = parser.parse_args()
-    run_parking_analysis(args.voronoi, args.vehicles)
+    run_parking_analysis(args.voronoi, args.vehicles, args.suffix)
