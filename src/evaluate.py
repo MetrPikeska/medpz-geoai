@@ -209,19 +209,34 @@ def _plot_duplicate_map(gdf: gpd.GeoDataFrame, path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 def _make_test_crop(src_path: Path, crop_path: Path, size: int = 2000) -> None:
-    """Vyřízne čtverec size×size px z horního levého rohu ortofota."""
+    """Vyřízne čtverec size×size px centrovaný na hustotu detekovaných vozidel."""
     import rasterio
     from rasterio.windows import Window
+
     crop_path.parent.mkdir(parents=True, exist_ok=True)
+
     with rasterio.open(src_path) as src:
-        window = Window(0, 0, min(size, src.width), min(size, src.height))
+        # Střed na centroidu existujících detekcí, jinak střed snímku
+        if VEHICLES_GPKG.exists():
+            veh = gpd.read_file(VEHICLES_GPKG)
+            cx = veh.geometry.centroid.x.mean()
+            cy = veh.geometry.centroid.y.mean()
+            center_row, center_col = src.index(cx, cy)
+        else:
+            center_col, center_row = src.width // 2, src.height // 2
+
+        col_off = max(0, min(center_col - size // 2, src.width - size))
+        row_off = max(0, min(center_row - size // 2, src.height - size))
+        window = Window(col_off, row_off, min(size, src.width), min(size, src.height))
         transform = src.window_transform(window)
         data = src.read(window=window)
         profile = src.profile.copy()
         profile.update(width=window.width, height=window.height, transform=transform)
+
     with rasterio.open(crop_path, "w", **profile) as dst:
         dst.write(data)
-    print(f"  Test crop uložen: {crop_path} ({window.width}×{window.height} px)")
+    print(f"  Test crop: {crop_path} ({window.width}×{window.height} px, "
+          f"offset col={col_off} row={row_off})")
 
 
 def _detect_once(
