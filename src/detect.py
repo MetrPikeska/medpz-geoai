@@ -15,7 +15,7 @@ OUTPUT_VECTORS = Path("data/vectors/vehicles.gpkg")
 OUTPUT_PREVIEW = Path("outputs/detection_preview.jpg")
 
 VEHICLE_CLASSES = {"small vehicle", "large vehicle"}
-MODEL = "yolov8n-obb.pt"
+MODEL = "yolov8s-obb.pt"
 
 
 def run_detection(
@@ -39,7 +39,7 @@ def run_detection(
         model_type="ultralytics",
         model_path=MODEL,
         confidence_threshold=conf,
-        device="cpu",
+        device="cuda",
     )
 
     result = get_sliced_prediction(
