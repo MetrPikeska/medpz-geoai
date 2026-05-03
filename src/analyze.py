@@ -138,6 +138,10 @@ def run_analysis(
         print(f"{label:<12} {r:>7.3f} {p:>8.4f} {stars}")
         corr_rows.append({"vekova_skupina": label, "r": round(r, 3), "p": round(p, 4)})
 
+    # Derive suffix from output_map stem (e.g. analysis_map_1 → _1)
+    stem = output_map.stem
+    suffix = stem[len("analysis_map"):]
+
     # --- Exports ---
     output_voronoi.parent.mkdir(parents=True, exist_ok=True)
     output_map.parent.mkdir(parents=True, exist_ok=True)
@@ -154,7 +158,7 @@ def run_analysis(
         "vehicles_total", "vehicles_small", "vehicles_large", "density_per_resident"
     ]
     voronoi[[c for c in stats_cols if c in voronoi.columns]].to_csv(output_stats, index=False)
-    pd.DataFrame(corr_rows).to_csv(output_stats.parent / "correlations.csv", index=False)
+    pd.DataFrame(corr_rows).to_csv(output_stats.parent / f"correlations{suffix}.csv", index=False)
     print(f"Statistiky: {output_stats}")
     print(f"Korelace: {output_stats.parent / 'correlations.csv'}")
 
@@ -194,7 +198,7 @@ def run_analysis(
     print(f"Mapa uložena: {output_map}")
 
     # Correlation bar chart
-    corr_map = output_map.parent / "correlations.png"
+    corr_map = output_map.parent / f"correlations{suffix}.png"
     fig2, ax2 = plt.subplots(figsize=(8, 5))
     colors_bar = ["#d73027" if r < 0 else "#4575b4" for r in [row["r"] for row in corr_rows]]
     bars = ax2.bar(AGE_LABELS[:len(corr_rows)], [row["r"] for row in corr_rows],
@@ -214,7 +218,7 @@ def run_analysis(
     print(f"Graf korelací: {corr_map}")
 
     # Scatter plot: podíl seniorů vs. auta na osobu
-    scatter_path = output_map.parent / "scatter_seniors.png"
+    scatter_path = output_map.parent / f"scatter_seniors{suffix}.png"
     fig3, ax3 = plt.subplots(figsize=(8, 6))
     senior_share = valid["sum_65_"] / valid["celkem"]
     ax3.scatter(senior_share, valid["density_per_resident"],
