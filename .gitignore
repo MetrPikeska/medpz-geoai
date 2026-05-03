@@ -1,3 +1,16 @@
+# Rastrová data (velké soubory)
 *.tif
 *.tiff
+
+# Modely (stačí nano v repozitáři)
 yolov8s-obb.pt
+yolov8m-obb.pt
+
+# Vygenerované výstupy – reprodukovatelné spuštěním skriptů
+outputs/
+data/vectors/
+
+# Python
+__pycache__/
+*.py[cod]
+.env

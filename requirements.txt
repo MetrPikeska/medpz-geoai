@@ -3,3 +3,5 @@ rasterio
 leafmap
 osmnx
 segment-geospatial[samgeo2]
+scipy
+matplotlib
