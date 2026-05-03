@@ -247,13 +247,19 @@ def _detect_once(
     iou_match: float,
 ) -> gpd.GeoDataFrame:
     import rasterio
+    import numpy as np
+    from PIL import Image
     from sahi import AutoDetectionModel
     from sahi.predict import get_sliced_prediction
     from shapely.geometry import box as sbox
 
+    # GeoTIFF → PIL přes rasterio (SAHI neumí číst GeoTIFF přímo)
     with rasterio.open(input_path) as src:
         crs = src.crs
         transform = src.transform
+        data = src.read([1, 2, 3])  # RGB bands
+
+    img = Image.fromarray(np.moveaxis(data, 0, -1).astype(np.uint8))
 
     model = AutoDetectionModel.from_pretrained(
         model_type="ultralytics",
@@ -262,7 +268,7 @@ def _detect_once(
         device="cpu",
     )
     result = get_sliced_prediction(
-        image=str(input_path),
+        image=img,
         detection_model=model,
         slice_height=slice_size,
         slice_width=slice_size,

@@ -49,6 +49,7 @@ def run_detection(
         slice_width=slice_size,
         overlap_height_ratio=overlap,
         overlap_width_ratio=overlap,
+        postprocess_match_threshold=0.3,  # sweep ukázal: 0.3 → 0 % duplicit, 0.7 → až 8 %
         verbose=1,
     )
 

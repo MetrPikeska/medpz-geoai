@@ -115,6 +115,60 @@ Možné důvody:
 
 ---
 
+## Evaluace kvality detekce (parametrický sweep)
+
+Skript `src/evaluate.py` otestoval 27 kombinací parametrů na výřezu 2000×2000 px
+centrovaném na oblast s nejvyšší hustotou vozidel.
+
+### Co se sweepovalo
+
+| Parametr | Hodnoty | Co ovlivňuje |
+|---|---|---|
+| `conf` | 0.15 / 0.25 / 0.35 | confidence threshold YOLOv8 |
+| `overlap` | 0.1 / 0.2 / 0.3 | překryv dlaždic SAHI |
+| `postprocess_match_threshold` | 0.3 / 0.5 / 0.7 | IOS práh pro sloučení boxů přes dlaždice |
+
+### Výsledky: duplicity
+
+Klíčový parametr je `postprocess_match_threshold` — práh IOS (Intersection over Smaller),
+nad kterým SAHI sloučí dva boxy do jednoho:
+
+| iou_match | Průměrný dup_rate |
+|---|---|
+| **0.3** | **0.0 %** |
+| 0.5 | ~1.5 % |
+| 0.7 | ~6 % |
+
+`conf` a `overlap` duplicity téměř neovlivní — rozhoduje výhradně `iou_match`.
+
+### Výsledky: klasifikace malá vs. velká vozidla
+
+| Konfigurace | size_ratio (large/small) | Mann-Whitney p |
+|---|---|---|
+| všechny (27 konfigurací) | 0.97–1.05 | 0.06–0.65 |
+
+**Klasifikace je nezávislá na nastavení parametrů.** Medián plochy boxu je ~10.5–11.5 m²
+pro *obě třídy* bez ohledu na conf/overlap/iou_match. Nikdy není statisticky oddělená (p > 0.05).
+
+**Příčina:** YOLOv8-OBB byl natrénován na DOTA (satelitní snímky, stovky metrů výška).
+V DOTA se „small vehicle" vs. „large vehicle" rozlišuje jinak než na 10 cm/px ortofotu.
+Model vidí jiné textury a úhly než na trénovacích datech → třídy spolehlivě neodlišuje.
+
+### Doporučená konfigurace
+
+```
+conf=0.25  overlap=0.2  postprocess_match_threshold=0.3
+```
+
+- 0 % duplicit
+- 124 vozidel na testovacím výřezu (vs. 125 při conf=0.25/overlap=0.2/iou=0.5)
+- Tato hodnota je nyní výchozí v `src/detect.py`
+
+**Klasifikaci small/large nelze zlepšit laděním parametrů** — vyžadovalo by to fine-tuning
+modelu na ručně anotovaných datech z tohoto ortofota.
+
+---
+
 ## Skripty
 
 ```bash
@@ -123,15 +177,24 @@ python src/detect.py --conf 0.25 --slice-size 640 --overlap 0.2
 
 # 2. Prostorová analýza + grafy
 python src/analyze.py
+
+# 3. Rozšířená analýza parkování
+python src/parking_analysis.py
+
+# 4. Evaluace kvality detekce (analýza existujících dat)
+python src/evaluate.py analyze
+
+# 4b. Parametrický sweep (trvá ~20 min)
+python src/evaluate.py sweep
 ```
 
-Závislosti: `pip install geopandas scipy matplotlib` (+ ultralytics, sahi pro detekci)
+Závislosti: `pip install geopandas scipy matplotlib scikit-learn sahi ultralytics rasterio`
 
 ---
 
 ## Limity a možná rozšíření
 
 - **Jeden časový snímek** – parkování se v průběhu dne mění
-- **Model natrénovaný na DOTA** – ne ideální pro česká sídliště, může plést stíny budov s auty
+- **Klasifikace small/large nespolehlivá** – model DOTA neodpovídá česky sídlišti; pro spolehlivou klasifikaci by bylo nutné fine-tunovat na ručních anotacích
 - **Voronoi ≠ skutečné spádové oblasti** – nevzohledňuje zástavbu, ulice ani vzdálenost chůze
 - Možné rozšíření: kernel density estimation (KDE) místo Voronoi, nebo síťová analýza (nejbližší adresa po silnici)
