@@ -5,3 +5,6 @@ osmnx
 segment-geospatial[samgeo2]
 scipy
 matplotlib
+scikit-learn
+sahi
+ultralytics
